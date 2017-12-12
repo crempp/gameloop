@@ -1,0 +1,62 @@
+{
+  "name": "gameloop",
+  "version": "0.1.0",
+  "author": "Seth Battin seth.battin@gmail.com>",
+  "contributors": [
+    {
+      "name": "Seth Battin",
+      "email": "seth.battin@gmail.com"
+    },
+    {
+      "name": "Chad Rempp",
+      "email": "crempp@gmail.com"
+    }
+  ],
+  "license": "MIT",
+  "description": "An easy loop for html5 canvas games.",
+  "main": "dist/main.js",
+  "bin": "dist/cli/cli.js",
+  "engines": {
+    "node": ">=8.9.3"
+  },
+  "scripts": {
+    "test": "mocha --reporter spec",
+    "test-test": "eslint src && jest",
+    "lint": "eslint src tools",
+    "docs": "jsdoc -r --destination docs/ --readme README.md src/",
+    "buildold": "babel src --presets babel-preset-es2015 --out-dir dist",
+    "build": "webpack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/crempp/gameloop"
+  },
+  "keywords": [
+    "html5",
+    "game",
+    "canvas"
+  ],
+  "bugs": {
+    "url": "https://github.com/crempp/gameloop/issues"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-es2015": "^6.24.1",
+    "chai": "^3.5.0",
+    "clean-webpack-plugin": "^0.1.17",
+    "copy-webpack-plugin": "^4.2.3",
+    "mocha": "^2.5.3",
+    "webpack": "^3.10.0"
+  },
+  "dependencies": {
+    "@shoutem/webpack-prepend-append": "github:lyonzy/webpack-prepend-append#patch-1",
+    "commander": "^2.9.0",
+    "compression": "^1.7.1",
+    "express": "^4.16.2",
+    "express-winston": "^2.4.0",
+    "fs": "0.0.2",
+    "path": "^0.12.7",
+    "winston": "^2.4.0"
+  }
+}
