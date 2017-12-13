@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-var commander = require("commander");
-var fs = require("fs");
-var path = require("path");
-var serve = require("../server/server");
+import commander from "commander"
+import fs from "fs"
+import path from "path"
+import serve from "./server"
 
-var callingDir = process.cwd();
+let callingDir = process.cwd();
 
-var logo = `
+let logo = `
                              .__                        
    _________    _____   ____ |  |   ____   ____ ______  
   / ___\\__  \\  /     \\_/ __ \\|  |  /  _ \\ /  _ \\\\____ \\ 
@@ -21,14 +21,14 @@ function getVersion () {
 };
 
 function copyFile(source, target, cb) {
-  var cbCalled = false;
+  let cbCalled = false;
 
-  var rd = fs.createReadStream(source);
+  let rd = fs.createReadStream(source);
   rd.on("error", function (err) {
     done(err);
   });
 
-  var wr = fs.createWriteStream(target);
+  let wr = fs.createWriteStream(target);
   wr.on("error", function (err) {
     done(err);
   });
@@ -55,9 +55,9 @@ commander
     console.log(logo);
     console.log("initializing gameloop...");
 
-    var callingDir = process.cwd();
-    var src = path.normalize(__dirname + "../../../src/templates");
-    var dest = path.normalize(callingDir + "/game");
+    let callingDir = process.cwd();
+    let src = path.normalize(__dirname + "../../../src/templates");
+    let dest = path.normalize(callingDir + "/game");
 
     if (!fs.existsSync(dest)){
       fs.mkdirSync(dest);
@@ -69,7 +69,7 @@ commander
 
 commander
   .command('serve')
-  .description('start game web server')
+  .description('start game web cli')
   .option('-p, --port [port]', 'listening port', 8080)
   .option('-r, --root [path]', 'root content path', callingDir + '/game')
   .action(function (options) {

@@ -63,6 +63,6 @@ export default function(port, root) {
   app.use(express.static(root));
 
   return app.listen(port, () => {
-    console.log('Gameloop server running on port ' + port);
+    console.log('Gameloop cli running on port ' + port);
   });
 }
