@@ -1,15 +1,25 @@
-'use strict';
-var path = require('path');
+import GameLoop from "./gameloop/GameLoop";
+import logo from "./logo";
 
-/**
- * Adds commas to a number
- * @param {number} number
- * @param {string} locale
- * @return {string}
- */
-function sdf(number, locale) {
-  return number.toLocaleString(locale);
-};
+console.log(logo);
 
-console.log("In the gameloop");
-console.log(path);
+window.GameLoop = new GameLoop();
+
+// TODO make this something else
+const canvas = "game-canvas";
+
+if (document.readyState === "complete") {
+  window.GameLoop.initialize(canvas);
+} else {
+  const prevORSC = document.onreadystatechange;  //save previous event
+  document.onreadystatechange = function () {
+
+    if (typeof(prevORSC) === "function"){
+      prevORSC();
+    }
+
+    if (document.readyState === "complete") {
+      window.GameLoop.initialize(canvas);
+    }
+  };
+}

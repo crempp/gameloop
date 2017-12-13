@@ -5,23 +5,15 @@
  *
  * @type {createServer|exports|module.exports}
  */
-
-// import path from "path";
-// import express from "express";
-// import winston from "winston";
-// import compress from "compression";
-// import expressWinston from "express-winston";
-
-
-var express = require("express");
-var winston = require("winston");
-var compress = require("compression");
-var expressWinston = require("express-winston");
-var path = require("path");
+import path from "path";
+import express from "express";
+import winston from "winston";
+import compress from "compression";
+import expressWinston from "express-winston";
 
 export default function(port, root) {
   root = path.normalize(root);
-  let app = express();
+  const app = express();
 
   app.use(expressWinston.logger({
     transports: [
@@ -34,7 +26,7 @@ export default function(port, root) {
     msg: "HTTP {{req.method}} {{req.url}}",
     expressFormat: true,
     colorize: true,
-    ignoreRoute: function (req, res) {
+    ignoreRoute: () => {
       return false;
     }
   }));
@@ -42,18 +34,18 @@ export default function(port, root) {
   app.use(compress());
 
   app.get("/gameloop.js", (req, res, next) => {
-    let moduleRoot = path.normalize(__dirname + "/../");
+    const moduleRoot = path.normalize(__dirname + "/../");
 
-    let options = {
+    const options = {
       root: moduleRoot,
-      dotfiles: 'deny',
+      dotfiles: "deny",
       headers: {
-        'x-timestamp': Date.now(),
-        'x-sent': true
+        "x-timestamp": Date.now(),
+        "x-sent": true
       }
     };
 
-    res.sendFile('gameloop.js', options, (err) => {
+    res.sendFile("gameloop.js", options, (err) => {
       if (err) {
         next(err);
       }
@@ -63,6 +55,6 @@ export default function(port, root) {
   app.use(express.static(root));
 
   return app.listen(port, () => {
-    console.log('Gameloop cli running on port ' + port);
+    process.stdout.write("Gameloop cli running on port " + port);
   });
 }

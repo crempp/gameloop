@@ -5,11 +5,11 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 exports.default = function (port, root) {
-  root = path.normalize(root);
-  var app = express();
+  root = _path2.default.normalize(root);
+  var app = (0, _express2.default)();
 
-  app.use(expressWinston.logger({
-    transports: [new winston.transports.Console({
+  app.use(_expressWinston2.default.logger({
+    transports: [new _winston2.default.transports.Console({
       json: false,
       colorize: true
     })],
@@ -17,56 +17,57 @@ exports.default = function (port, root) {
     msg: "HTTP {{req.method}} {{req.url}}",
     expressFormat: true,
     colorize: true,
-    ignoreRoute: function ignoreRoute(req, res) {
+    ignoreRoute: function ignoreRoute() {
       return false;
     }
   }));
 
-  app.use(compress());
+  app.use((0, _compression2.default)());
 
   app.get("/gameloop.js", function (req, res, next) {
-    var moduleRoot = path.normalize(__dirname + "/../");
+    var moduleRoot = _path2.default.normalize(__dirname + "/../");
 
     var options = {
       root: moduleRoot,
-      dotfiles: 'deny',
+      dotfiles: "deny",
       headers: {
-        'x-timestamp': Date.now(),
-        'x-sent': true
+        "x-timestamp": Date.now(),
+        "x-sent": true
       }
     };
 
-    res.sendFile('gameloop.js', options, function (err) {
+    res.sendFile("gameloop.js", options, function (err) {
       if (err) {
         next(err);
       }
     });
   });
 
-  app.use(express.static(root));
+  app.use(_express2.default.static(root));
 
   return app.listen(port, function () {
-    console.log('Gameloop cli running on port ' + port);
+    process.stdout.write("Gameloop cli running on port " + port);
   });
 };
 
-/**
- * Gameloop server
- *
- * Starts a node webserver for serving the gameloop content.
- *
- * @type {createServer|exports|module.exports}
- */
+var _path = require("path");
 
-// import path from "path";
-// import express from "express";
-// import winston from "winston";
-// import compress from "compression";
-// import expressWinston from "express-winston";
+var _path2 = _interopRequireDefault(_path);
 
+var _express = require("express");
 
-var express = require("express");
-var winston = require("winston");
-var compress = require("compression");
-var expressWinston = require("express-winston");
-var path = require("path");
+var _express2 = _interopRequireDefault(_express);
+
+var _winston = require("winston");
+
+var _winston2 = _interopRequireDefault(_winston);
+
+var _compression = require("compression");
+
+var _compression2 = _interopRequireDefault(_compression);
+
+var _expressWinston = require("express-winston");
+
+var _expressWinston2 = _interopRequireDefault(_expressWinston);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }

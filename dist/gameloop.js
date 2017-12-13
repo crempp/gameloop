@@ -70,441 +70,333 @@
 "use strict";
 
 
-var path = __webpack_require__(1);
+var _GameLoop = __webpack_require__(1);
 
-/**
- * Adds commas to a number
- * @param {number} number
- * @param {string} locale
- * @return {string}
- */
-function sdf(number, locale) {
-  return number.toLocaleString(locale);
-};
+var _GameLoop2 = _interopRequireDefault(_GameLoop);
 
-console.log("In the gameloop");
-console.log(path);
+var _logo = __webpack_require__(3);
+
+var _logo2 = _interopRequireDefault(_logo);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+console.log(_logo2.default);
+
+window.GameLoop = new _GameLoop2.default();
+
+// TODO make this something else
+var canvas = "game-canvas";
+
+if (document.readyState === "complete") {
+  window.GameLoop.initialize(canvas);
+} else {
+  var prevORSC = document.onreadystatechange; //save previous event
+  document.onreadystatechange = function () {
+
+    if (typeof prevORSC === "function") {
+      prevORSC();
+    }
+
+    if (document.readyState === "complete") {
+      window.GameLoop.initialize(canvas);
+    }
+  };
+}
 
 /***/ }),
 /* 1 */
 /***/ (function(module, exports, __webpack_require__) {
 
-/* WEBPACK VAR INJECTION */(function(process) {// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
+"use strict";
 
-// resolves . and .. elements in a path array with directory names there
-// must be no slashes, empty elements, or device names (c:\) in the array
-// (so also no leading and trailing slashes - it does not distinguish
-// relative and absolute paths)
-function normalizeArray(parts, allowAboveRoot) {
-  // if the path tries to go above the root, `up` ends up > 0
-  var up = 0;
-  for (var i = parts.length - 1; i >= 0; i--) {
-    var last = parts[i];
-    if (last === '.') {
-      parts.splice(i, 1);
-    } else if (last === '..') {
-      parts.splice(i, 1);
-      up++;
-    } else if (up) {
-      parts.splice(i, 1);
-      up--;
-    }
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Exceptions = __webpack_require__(2);
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * GameLoop Class
+ *
+ * TODO: implement window-visibility loss detection
+ * http://stackoverflow.com/a/1060034/1004027
+ *
+ * @param canvas {string} id of <canvas> element | {HTMLCanvasElement} to draw on.
+ * @returns {GameLoop}
+ * @constructor
+ */
+var GameLoop = function () {
+  function GameLoop(canvas) {
+    _classCallCheck(this, GameLoop);
+
+    this.canvas = canvas;
+    this.ctx = null;
+    this.initialized = false;
+    this.drawContext = null;
+    this.initialized = false;
+    this.initEvents = [];
+    this.prevUpdate = 0;
+    this.prevDraw = 0;
+    this.updateables = [];
+    this.drawables = [];
+    this.targetRate = 33;
   }
 
-  // if the path is allowed to go above the root, restore leading ..s
-  if (allowAboveRoot) {
-    for (; up--; up) {
-      parts.unshift('..');
-    }
-  }
-
-  return parts;
-}
-
-// Split a filename into [root, dir, basename, ext], unix version
-// 'root' is just a slash, or nothing.
-var splitPathRe =
-    /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
-var splitPath = function(filename) {
-  return splitPathRe.exec(filename).slice(1);
-};
-
-// path.resolve([from ...], to)
-// posix version
-exports.resolve = function() {
-  var resolvedPath = '',
-      resolvedAbsolute = false;
-
-  for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
-    var path = (i >= 0) ? arguments[i] : process.cwd();
-
-    // Skip empty and invalid entries
-    if (typeof path !== 'string') {
-      throw new TypeError('Arguments to path.resolve must be strings');
-    } else if (!path) {
-      continue;
-    }
-
-    resolvedPath = path + '/' + resolvedPath;
-    resolvedAbsolute = path.charAt(0) === '/';
-  }
-
-  // At this point the path should be resolved to a full absolute path, but
-  // handle relative paths to be safe (might happen when process.cwd() fails)
-
-  // Normalize the path
-  resolvedPath = normalizeArray(filter(resolvedPath.split('/'), function(p) {
-    return !!p;
-  }), !resolvedAbsolute).join('/');
-
-  return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
-};
-
-// path.normalize(path)
-// posix version
-exports.normalize = function(path) {
-  var isAbsolute = exports.isAbsolute(path),
-      trailingSlash = substr(path, -1) === '/';
-
-  // Normalize the path
-  path = normalizeArray(filter(path.split('/'), function(p) {
-    return !!p;
-  }), !isAbsolute).join('/');
-
-  if (!path && !isAbsolute) {
-    path = '.';
-  }
-  if (path && trailingSlash) {
-    path += '/';
-  }
-
-  return (isAbsolute ? '/' : '') + path;
-};
-
-// posix version
-exports.isAbsolute = function(path) {
-  return path.charAt(0) === '/';
-};
-
-// posix version
-exports.join = function() {
-  var paths = Array.prototype.slice.call(arguments, 0);
-  return exports.normalize(filter(paths, function(p, index) {
-    if (typeof p !== 'string') {
-      throw new TypeError('Arguments to path.join must be strings');
-    }
-    return p;
-  }).join('/'));
-};
+  /**
+   *
+   * @param canvas
+   */
 
 
-// path.relative(from, to)
-// posix version
-exports.relative = function(from, to) {
-  from = exports.resolve(from).substr(1);
-  to = exports.resolve(to).substr(1);
+  _createClass(GameLoop, [{
+    key: "initialize",
+    value: function initialize(canvas) {
+      if (!this.canvas) {
+        throw new _Exceptions.GameException("Missing canvas");
+      }
 
-  function trim(arr) {
-    var start = 0;
-    for (; start < arr.length; start++) {
-      if (arr[start] !== '') break;
+      // skip setting if context is already known.
+      if (this.drawContext === null) {
+        if (typeof this.canvas === "string") {
+          this.canvas = document.getElementById(canvas);
+        }
+        if (this.canvas.getContext) {
+          this.ctx = this.canvas.getContext("2d");
+        }
+      }
+
+      //unify browser functions
+      (function (w) {
+        w.requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame || function (f) {
+          return w.setTimeOut(f, 33);
+        }; // IE9?
+      })(window);
+
+      // kick off main loop
+      window.requestAnimationFrame(this._loop);
+
+      this.initialized = true;
+      this._fireInitEvents();
     }
 
-    var end = arr.length - 1;
-    for (; end >= 0; end--) {
-      if (arr[end] !== '') break;
+    /**
+     * Add and item to one or both of the update and draw lists
+     *
+     * @param objectable {Object} with function member "update" or "draw" or both
+     */
+
+  }, {
+    key: "addItem",
+    value: function addItem(objectable) {
+      if (objectable) {
+        if (typeof objectable.draw === "function") {
+          this.addDrawable(objectable);
+        }
+        if (typeof objectable.update === "function") {
+          this.addUpdateable(objectable);
+        }
+      }
     }
 
-    if (start > end) return [];
-    return arr.slice(start, end - start + 1);
-  }
+    /**
+     * Add an item to the list of items in the update list
+     *
+     * @param updateable {Object} with function member "update"
+     * @returns {Number} New count of updateable components
+     * @throws {GameException} if object does not contain "update" function
+     */
 
-  var fromParts = trim(from.split('/'));
-  var toParts = trim(to.split('/'));
-
-  var length = Math.min(fromParts.length, toParts.length);
-  var samePartsLength = length;
-  for (var i = 0; i < length; i++) {
-    if (fromParts[i] !== toParts[i]) {
-      samePartsLength = i;
-      break;
+  }, {
+    key: "addUpdateable",
+    value: function addUpdateable(updateable) {
+      if (updateable && updateable.update && typeof updateable.update === "function") {
+        this.updateables.push(updateable);
+      } else {
+        throw new _Exceptions.GameException("invalid updateable object added.");
+      }
+      //crude identifier, invalidated by each removal
+      return this.updateables.length;
     }
-  }
 
-  var outputParts = [];
-  for (var i = samePartsLength; i < fromParts.length; i++) {
-    outputParts.push('..');
-  }
+    /**
+     * Add an item to the list of items in the draw list
+     *
+     * @param drawable {Object} with function member "draw"
+     * @returns {Number} New count of drawable components
+     * @throws {GameException} if object does not contain "draw" function
+     */
 
-  outputParts = outputParts.concat(toParts.slice(samePartsLength));
-
-  return outputParts.join('/');
-};
-
-exports.sep = '/';
-exports.delimiter = ':';
-
-exports.dirname = function(path) {
-  var result = splitPath(path),
-      root = result[0],
-      dir = result[1];
-
-  if (!root && !dir) {
-    // No dirname whatsoever
-    return '.';
-  }
-
-  if (dir) {
-    // It has a dirname, strip trailing slash
-    dir = dir.substr(0, dir.length - 1);
-  }
-
-  return root + dir;
-};
-
-
-exports.basename = function(path, ext) {
-  var f = splitPath(path)[2];
-  // TODO: make this comparison case-insensitive on windows?
-  if (ext && f.substr(-1 * ext.length) === ext) {
-    f = f.substr(0, f.length - ext.length);
-  }
-  return f;
-};
-
-
-exports.extname = function(path) {
-  return splitPath(path)[3];
-};
-
-function filter (xs, f) {
-    if (xs.filter) return xs.filter(f);
-    var res = [];
-    for (var i = 0; i < xs.length; i++) {
-        if (f(xs[i], i, xs)) res.push(xs[i]);
+  }, {
+    key: "addDrawable",
+    value: function addDrawable(drawable) {
+      if (drawable && drawable.draw && typeof drawable.draw === "function") {
+        this.drawables.push(drawable);
+      } else {
+        throw new _Exceptions.GameException("Invalid drawable object added.");
+      }
+      return this.drawables.length;
     }
-    return res;
-}
 
-// String.prototype.substr - negative index don't work in IE8
-var substr = 'ab'.substr(-1) === 'b'
-    ? function (str, start, len) { return str.substr(start, len) }
-    : function (str, start, len) {
-        if (start < 0) start = str.length + start;
-        return str.substr(start, len);
+    /**
+     *
+     * @param item
+     * @returns {boolean}
+     */
+
+  }, {
+    key: "remove",
+    value: function remove(item) {
+      var _this = this;
+
+      this.drawables.forEach(function (object, i) {
+        if (object === item) {
+          _this.drawables.splice(i, 1);
+          return true;
+        }
+      });
+
+      this.updateables.forEach(function (object, i) {
+        if (object === item) {
+          _this.updateables.splice(i, 1);
+          return true;
+        }
+      });
+
+      return false;
     }
-;
 
-/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(2)))
+    /**
+     *
+     * @param timestamp
+     * @private
+     */
+
+  }, {
+    key: "_loop",
+    value: function _loop(timestamp) {
+      if (this.initialized) {
+        this._update(timestamp);
+        this._draw(timestamp);
+      }
+      requestAnimationFrame(this._loop);
+    }
+
+    /**
+     *
+     * @param timestamp
+     * @private
+     */
+
+  }, {
+    key: "_update",
+    value: function _update(timestamp) {
+      var _this2 = this;
+
+      var timeDiff = timestamp - this.prevUpdate;
+      this.prevUpdate = timestamp;
+
+      timeDiff = timeDiff % (2 * this.targetRate);
+
+      this.updateables.forEach(function (object) {
+        object.update(_this2.drawContext, timeDiff, timestamp);
+      });
+    }
+
+    /**
+     *
+     * @param timestamp
+     * @private
+     */
+
+  }, {
+    key: "_draw",
+    value: function _draw(timestamp) {
+      var _this3 = this;
+
+      var timeDiff = timestamp - this.prevDraw;
+      this.prevDraw = timestamp;
+      this.drawables.forEach(function (object) {
+        if (typeof _this3.drawContext.save === "function") {
+          _this3.drawContext.save();
+        }
+        object.draw(_this3.drawContext, timeDiff, timestamp);
+        if (typeof _this3.drawContext.restore === "function") {
+          _this3.drawContext.restore();
+        }
+      });
+    }
+
+    /**
+     *
+     * @param f
+     * @private
+     */
+
+  }, {
+    key: "_onInit",
+    value: function _onInit(f) {
+      this.initEvents.push(f);
+    }
+
+    /**
+     *
+     * @private
+     */
+
+  }, {
+    key: "_fireInitEvents",
+    value: function _fireInitEvents() {
+      var _this4 = this;
+
+      this.initEvents.forEach(function (event) {
+        event.call(_this4);
+      });
+    }
+  }]);
+
+  return GameLoop;
+}();
+
+exports.default = GameLoop;
 
 /***/ }),
 /* 2 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
-// shim for using process in browser
-var process = module.exports = {};
-
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
-
-var cachedSetTimeout;
-var cachedClearTimeout;
-
-function defaultSetTimout() {
-    throw new Error('setTimeout has not been defined');
-}
-function defaultClearTimeout () {
-    throw new Error('clearTimeout has not been defined');
-}
-(function () {
-    try {
-        if (typeof setTimeout === 'function') {
-            cachedSetTimeout = setTimeout;
-        } else {
-            cachedSetTimeout = defaultSetTimout;
-        }
-    } catch (e) {
-        cachedSetTimeout = defaultSetTimout;
-    }
-    try {
-        if (typeof clearTimeout === 'function') {
-            cachedClearTimeout = clearTimeout;
-        } else {
-            cachedClearTimeout = defaultClearTimeout;
-        }
-    } catch (e) {
-        cachedClearTimeout = defaultClearTimeout;
-    }
-} ())
-function runTimeout(fun) {
-    if (cachedSetTimeout === setTimeout) {
-        //normal enviroments in sane situations
-        return setTimeout(fun, 0);
-    }
-    // if setTimeout wasn't available but was latter defined
-    if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
-        cachedSetTimeout = setTimeout;
-        return setTimeout(fun, 0);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedSetTimeout(fun, 0);
-    } catch(e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
-            return cachedSetTimeout.call(null, fun, 0);
-        } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
-            return cachedSetTimeout.call(this, fun, 0);
-        }
-    }
+"use strict";
 
 
-}
-function runClearTimeout(marker) {
-    if (cachedClearTimeout === clearTimeout) {
-        //normal enviroments in sane situations
-        return clearTimeout(marker);
-    }
-    // if clearTimeout wasn't available but was latter defined
-    if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
-        cachedClearTimeout = clearTimeout;
-        return clearTimeout(marker);
-    }
-    try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
-        return cachedClearTimeout(marker);
-    } catch (e){
-        try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
-            return cachedClearTimeout.call(null, marker);
-        } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
-            return cachedClearTimeout.call(this, marker);
-        }
-    }
-
-
-
-}
-var queue = [];
-var draining = false;
-var currentQueue;
-var queueIndex = -1;
-
-function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
-    draining = false;
-    if (currentQueue.length) {
-        queue = currentQueue.concat(queue);
-    } else {
-        queueIndex = -1;
-    }
-    if (queue.length) {
-        drainQueue();
-    }
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.GameException = GameException;
+function GameException(message) {
+  this.message = message;
+  this.name = "GameException";
 }
 
-function drainQueue() {
-    if (draining) {
-        return;
-    }
-    var timeout = runTimeout(cleanUpNextTick);
-    draining = true;
+/***/ }),
+/* 3 */
+/***/ (function(module, exports, __webpack_require__) {
 
-    var len = queue.length;
-    while(len) {
-        currentQueue = queue;
-        queue = [];
-        while (++queueIndex < len) {
-            if (currentQueue) {
-                currentQueue[queueIndex].run();
-            }
-        }
-        queueIndex = -1;
-        len = queue.length;
-    }
-    currentQueue = null;
-    draining = false;
-    runClearTimeout(timeout);
-}
+"use strict";
 
-process.nextTick = function (fun) {
-    var args = new Array(arguments.length - 1);
-    if (arguments.length > 1) {
-        for (var i = 1; i < arguments.length; i++) {
-            args[i - 1] = arguments[i];
-        }
-    }
-    queue.push(new Item(fun, args));
-    if (queue.length === 1 && !draining) {
-        runTimeout(drainQueue);
-    }
-};
 
-// v8 likes predictible objects
-function Item(fun, array) {
-    this.fun = fun;
-    this.array = array;
-}
-Item.prototype.run = function () {
-    this.fun.apply(null, this.array);
-};
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
-process.versions = {};
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+/**
+ * http://www.network-science.de/ascii/
+ *
+ * Gothic
+ */
 
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-process.prependListener = noop;
-process.prependOnceListener = noop;
-
-process.listeners = function (name) { return [] }
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-};
-
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-process.umask = function() { return 0; };
-
+var logo = exports.logo = "\n                             .__                        \n   _________    _____   ____ |  |   ____   ____ ______  \n  / ___\\__  \\  /     \\_/ __ \\|  |  /  _ \\ /  _ \\\\____ \\ \n / /_/  > __ \\|  Y Y  \\  ___/|  |_(  <_> |  <_> )  |_> >\n \\___  (____  /__|_|  /\\___  >____/\\____/ \\____/|   __/ \n/_____/     \\/      \\/     \\/                   |__|\n";
 
 /***/ })
 /******/ ]);
