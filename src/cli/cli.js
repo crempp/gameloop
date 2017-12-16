@@ -5,6 +5,7 @@ import path from "path";
 import serve from "./server";
 // import logo from "../logo";
 
+// TODO: Figure out how to use the import to get the logo
 const logo = `
                              .__                        
    _________    _____   ____ |  |   ____   ____ ______  
@@ -54,7 +55,7 @@ commander
   .description("initialize game")
   .action(() => {
     process.stdout.write(logo);
-    process.stdout.write("initializing gameloop...");
+    process.stdout.write("initializing gameloop...\n");
 
     const callingDir = process.cwd();
     const src = path.normalize(__dirname + "../../../src/templates");
@@ -64,8 +65,9 @@ commander
       fs.mkdirSync(dest);
     }
 
-    copyFile(src + "/game.js.template", dest + "/game.js", () => {});
-    copyFile(src + "/index.html.template", dest + "/index.html", () =>{});
+    copyFile(src + "/game.js", dest + "/game.js", () => {});
+    copyFile(src + "/index.html", dest + "/index.html", () =>{});
+    copyFile(src + "/gameloop.css", dest + "/gameloop.css", () =>{});
   });
 
 commander

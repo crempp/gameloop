@@ -74,7 +74,15 @@ var _GameLoop = __webpack_require__(1);
 
 var _GameLoop2 = _interopRequireDefault(_GameLoop);
 
-var _logo = __webpack_require__(3);
+var _Clear = __webpack_require__(4);
+
+var _Clear2 = _interopRequireDefault(_Clear);
+
+var _StarField = __webpack_require__(5);
+
+var _StarField2 = _interopRequireDefault(_StarField);
+
+var _logo = __webpack_require__(6);
 
 var _logo2 = _interopRequireDefault(_logo);
 
@@ -82,26 +90,10 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 console.log(_logo2.default);
 
+window.Clear = _Clear2.default;
+window.StarField = _StarField2.default;
+
 window.GameLoop = new _GameLoop2.default();
-
-// TODO make this something else
-var canvas = "game-canvas";
-
-if (document.readyState === "complete") {
-  window.GameLoop.initialize(canvas);
-} else {
-  var prevORSC = document.onreadystatechange; //save previous event
-  document.onreadystatechange = function () {
-
-    if (typeof prevORSC === "function") {
-      prevORSC();
-    }
-
-    if (document.readyState === "complete") {
-      window.GameLoop.initialize(canvas);
-    }
-  };
-}
 
 /***/ }),
 /* 1 */
@@ -117,6 +109,8 @@ Object.defineProperty(exports, "__esModule", {
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _Exceptions = __webpack_require__(2);
+
+var _OnReady = __webpack_require__(3);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -156,19 +150,7 @@ var GameLoop = function () {
   _createClass(GameLoop, [{
     key: "initialize",
     value: function initialize(canvas) {
-      if (!this.canvas) {
-        throw new _Exceptions.GameException("Missing canvas");
-      }
-
-      // skip setting if context is already known.
-      if (this.drawContext === null) {
-        if (typeof this.canvas === "string") {
-          this.canvas = document.getElementById(canvas);
-        }
-        if (this.canvas.getContext) {
-          this.ctx = this.canvas.getContext("2d");
-        }
-      }
+      var _this = this;
 
       //unify browser functions
       (function (w) {
@@ -177,11 +159,32 @@ var GameLoop = function () {
         }; // IE9?
       })(window);
 
-      // kick off main loop
-      window.requestAnimationFrame(this._loop);
+      (0, _OnReady.onReady)(function () {
+        if (!canvas) {
+          throw new _Exceptions.GameException("Missing canvas");
+        }
 
-      this.initialized = true;
-      this._fireInitEvents();
+        // skip setting if context is already known.
+        if (_this.drawContext === null) {
+          if (typeof canvas === "string") {
+            _this.canvas = document.getElementById(canvas);
+          }
+          if (_this.canvas.getContext) {
+            _this.ctx = _this.canvas.getContext("2d");
+            // Why do we need drawContext?
+            _this.drawContext = _this.ctx;
+          }
+        }
+
+        window.addEventListener("resize", _this._resizeCanvas.bind(_this), false);
+        _this._resizeCanvas();
+
+        // kick off main loop
+        window.requestAnimationFrame(_this._loop.bind(_this));
+
+        _this.initialized = true;
+        _this._fireInitEvents();
+      });
     }
 
     /**
@@ -251,18 +254,18 @@ var GameLoop = function () {
   }, {
     key: "remove",
     value: function remove(item) {
-      var _this = this;
+      var _this2 = this;
 
       this.drawables.forEach(function (object, i) {
         if (object === item) {
-          _this.drawables.splice(i, 1);
+          _this2.drawables.splice(i, 1);
           return true;
         }
       });
 
       this.updateables.forEach(function (object, i) {
         if (object === item) {
-          _this.updateables.splice(i, 1);
+          _this2.updateables.splice(i, 1);
           return true;
         }
       });
@@ -283,7 +286,7 @@ var GameLoop = function () {
         this._update(timestamp);
         this._draw(timestamp);
       }
-      requestAnimationFrame(this._loop);
+      requestAnimationFrame(this._loop.bind(this));
     }
 
     /**
@@ -295,7 +298,7 @@ var GameLoop = function () {
   }, {
     key: "_update",
     value: function _update(timestamp) {
-      var _this2 = this;
+      var _this3 = this;
 
       var timeDiff = timestamp - this.prevUpdate;
       this.prevUpdate = timestamp;
@@ -303,7 +306,7 @@ var GameLoop = function () {
       timeDiff = timeDiff % (2 * this.targetRate);
 
       this.updateables.forEach(function (object) {
-        object.update(_this2.drawContext, timeDiff, timestamp);
+        object.update(_this3.drawContext, timeDiff, timestamp);
       });
     }
 
@@ -316,17 +319,17 @@ var GameLoop = function () {
   }, {
     key: "_draw",
     value: function _draw(timestamp) {
-      var _this3 = this;
+      var _this4 = this;
 
       var timeDiff = timestamp - this.prevDraw;
       this.prevDraw = timestamp;
       this.drawables.forEach(function (object) {
-        if (typeof _this3.drawContext.save === "function") {
-          _this3.drawContext.save();
+        if (typeof _this4.drawContext.save === "function") {
+          _this4.drawContext.save();
         }
-        object.draw(_this3.drawContext, timeDiff, timestamp);
-        if (typeof _this3.drawContext.restore === "function") {
-          _this3.drawContext.restore();
+        object.draw(_this4.drawContext, timeDiff, timestamp);
+        if (typeof _this4.drawContext.restore === "function") {
+          _this4.drawContext.restore();
         }
       });
     }
@@ -351,11 +354,23 @@ var GameLoop = function () {
   }, {
     key: "_fireInitEvents",
     value: function _fireInitEvents() {
-      var _this4 = this;
+      var _this5 = this;
 
       this.initEvents.forEach(function (event) {
-        event.call(_this4);
+        event.call(_this5);
       });
+    }
+  }, {
+    key: "_resizeCanvas",
+    value: function _resizeCanvas() {
+      this.canvas.width = window.innerWidth;
+      this.canvas.height = window.innerHeight;
+
+      /**
+       * Your drawings need to be inside this function otherwise they will be reset when
+       * you resize the browser window and the canvas goes will be cleared.
+       */
+      // drawStuff();
     }
   }]);
 
@@ -390,13 +405,169 @@ function GameException(message) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.onReady = onReady;
+function onReady(cb) {
+  if (document.readyState === "complete") {
+    cb.apply(undefined, arguments);
+  } else {
+    var prevORSC = document.onreadystatechange; //save previous event
+    document.onreadystatechange = function () {
+      if (typeof prevORSC === "function") {
+        prevORSC();
+      }
+      if (document.readyState === "complete") {
+        cb.apply(undefined, arguments);
+      }
+    };
+  }
+}
+
+/***/ }),
+/* 4 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Clear = function () {
+  function Clear(color) {
+    _classCallCheck(this, Clear);
+
+    this.color = color || null;
+  }
+
+  _createClass(Clear, [{
+    key: "draw",
+    value: function draw(context) {
+      var width = context.canvas.width;
+      var height = context.canvas.height;
+
+      context.setTransform(1, 0, 0, 1, 0, 0);
+
+      if (this.color === null) {
+        context.clearRect(0, 0, width, height);
+      } else {
+        context.save();
+        context.fillStyle = this.color;
+        context.fillRect(0, 0, width, height);
+        context.restore();
+      }
+    }
+  }]);
+
+  return Clear;
+}();
+
+exports.default = Clear;
+
+/***/ }),
+/* 5 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var StarField = function () {
+  function StarField() {
+    _classCallCheck(this, StarField);
+
+    this.center = { x: 0, y: 0 };
+    this.bounds = { x: 0, y: 0 };
+    this.particles = [];
+    this.particleCount = 200;
+    this.color = "white";
+    this.clearing = true;
+    this.spawnRadius = 10;
+  }
+
+  _createClass(StarField, [{
+    key: "draw",
+    value: function draw(context) {
+
+      if (this.clearing) {
+        context.fillStyle = "rgba(0, 0, 10, 0.1)";
+        context.fillRect(0, 0, 2 * this.center.x, 2 * this.center.y);
+      }
+
+      context.fillStyle = this.color;
+
+      this.particles.forEach(function (particle) {
+        context.fillRect(particle.x - 1, particle.y - 1, 2, 2);
+      });
+    }
+  }, {
+    key: "update",
+    value: function update(context) {
+      var _this = this;
+
+      var bounds = {
+        x: context.canvas.width,
+        y: context.canvas.height
+      };
+
+      var center = {
+        x: bounds.x / 2,
+        y: bounds.y / 2
+      };
+
+      while (this.particles.length < this.particleCount) {
+        this.particles.push({
+          x: 2 * this.spawnRadius * Math.random() - this.spawnRadius + center.x,
+          y: 2 * this.spawnRadius * Math.random() - this.spawnRadius + center.y
+        });
+      }
+
+      this.particles.forEach(function (particle, i) {
+        particle.x += (particle.x - center.x) * 0.02;
+        particle.y += (particle.y - center.y) * 0.02;
+
+        if (particle.x < 0 || particle.x > bounds.x || particle.y < 0 || particle.y > bounds.y) {
+          _this.particles.splice(i, 1);
+        }
+      });
+    }
+  }]);
+
+  return StarField;
+}();
+
+exports.default = StarField;
+
+/***/ }),
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
 /**
  * http://www.network-science.de/ascii/
  *
  * Gothic
  */
 
-var logo = exports.logo = "\n                             .__                        \n   _________    _____   ____ |  |   ____   ____ ______  \n  / ___\\__  \\  /     \\_/ __ \\|  |  /  _ \\ /  _ \\\\____ \\ \n / /_/  > __ \\|  Y Y  \\  ___/|  |_(  <_> |  <_> )  |_> >\n \\___  (____  /__|_|  /\\___  >____/\\____/ \\____/|   __/ \n/_____/     \\/      \\/     \\/                   |__|\n";
+var logo = "\n                             .__                        \n   _________    _____   ____ |  |   ____   ____ ______  \n  / ___\\__  \\  /     \\_/ __ \\|  |  /  _ \\ /  _ \\\\____ \\ \n / /_/  > __ \\|  Y Y  \\  ___/|  |_(  <_> |  <_> )  |_> >\n \\___  (____  /__|_|  /\\___  >____/\\____/ \\____/|   __/ \n/_____/     \\/      \\/     \\/                   |__|\n";
+
+exports.default = logo;
 
 /***/ })
 /******/ ]);

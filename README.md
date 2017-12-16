@@ -64,6 +64,24 @@ Adds a component to the draw list only
 
     var game = new GameLoop(canvas);
     game.addDrawable(
+    
+    
+#### Notes
+Running dev for library work
+```
+$ npm run build && ./dist/cli/cli.js serve -r ./src/templates
+```
+
+Testing an example project
+```
+$ npm run build && npm link
+```
+
+and then in the example project
+```
+$ ./node_modules/.bin/gameloop init
+$ npm link gameloop && ./node_modules/.bin/gameloop serve
+```
 
 [changelog]: changelog.md
 [minimal]: \examples\minimal\

@@ -7,35 +7,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gameloop Server</title>
 
+  <link rel="stylesheet" type="text/css" href="gameloop.css">
+
+  <script src="gameloop.js"></script>
+
+  <script type="text/javascript">
+    GameLoop.initialize("game-canvas");
+    GameLoop.addItem(new Clear("#000040"));
+    GameLoop.addItem(new StarField());
+  </script>
+
 </head>
 <body>
 <!--[if lt IE 8]>
 <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
 <![endif]-->
 
-<div id="help">
-  <h2>Help</h2>
-  <div>
-    asdfl;kasjdf;lasdkjfas;dlkfjasd;lkfj
-    asd;flkjasddfl;kjasdf;lkjsa
-    sadfasdf
-  </div>
-
-  <h2>Documentation</h2>
-  <div>
-    <a href="/docs" target="_blank">Gameloop Development Docs</a>
-  </div>
-</div>
-
-<div id="instructions">
-  <div id="fullscreen" class="btn">Fullscreen</div>
-  Use arrows to navigate.
-</div>
-<canvas id="tilemap" width="640" height="360">
-  <p>Your browser does not support html5 canvas.  Download a better one (
-    <a href="http://www.google.com/chrome/">Chrome</a> ).</p>
-</canvas>
-<canvas id="debug" width="640" height="200" style="display: none">
+<canvas id="game-canvas" width="640" height="200" style="">
   <p>Your browser does not support html5 canvas.  Download a better one (
     a href="http://www.google.com/chrome/">Chrome</a> ).</p>
 </canvas>
@@ -52,3 +40,4 @@
    **/
 </script>
 </body>
+

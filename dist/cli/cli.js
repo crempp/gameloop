@@ -21,6 +21,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 // import logo from "../logo";
 
+// TODO: Figure out how to use the import to get the logo
 var logo = "\n                             .__                        \n   _________    _____   ____ |  |   ____   ____ ______  \n  / ___\\__  \\  /     \\_/ __ \\|  |  /  _ \\ /  _ \\\\____ \\ \n / /_/  > __ \\|  Y Y  \\  ___/|  |_(  <_> |  <_> )  |_> >\n \\___  (____  /__|_|  /\\___  >____/\\____/ \\____/|   __/ \n/_____/     \\/      \\/     \\/                   |__|\n";
 
 var callingDir = process.cwd();
@@ -61,7 +62,7 @@ _commander2.default.version(getVersion());
 
 _commander2.default.command("init").description("initialize game").action(function () {
   process.stdout.write(logo);
-  process.stdout.write("initializing gameloop...");
+  process.stdout.write("initializing gameloop...\n");
 
   var callingDir = process.cwd();
   var src = _path2.default.normalize(__dirname + "../../../src/templates");
@@ -71,8 +72,9 @@ _commander2.default.command("init").description("initialize game").action(functi
     _fs2.default.mkdirSync(dest);
   }
 
-  copyFile(src + "/game.js.template", dest + "/game.js", function () {});
-  copyFile(src + "/index.html.template", dest + "/index.html", function () {});
+  copyFile(src + "/game.js", dest + "/game.js", function () {});
+  copyFile(src + "/index.html", dest + "/index.html", function () {});
+  copyFile(src + "/gameloop.css", dest + "/gameloop.css", function () {});
 });
 
 _commander2.default.command("serve").description("start game web cli").option("-p, --port [port]", "listening port", 8080).option("-r, --root [path]", "root content path", callingDir + "/game").action(function (options) {

@@ -25,28 +25,26 @@ exports.default = function (port, root) {
   app.use((0, _compression2.default)());
 
   app.get("/gameloop.js", function (req, res, next) {
-    var moduleRoot = _path2.default.normalize(__dirname + "/../");
-
-    var options = {
-      root: moduleRoot,
-      dotfiles: "deny",
-      headers: {
-        "x-timestamp": Date.now(),
-        "x-sent": true
-      }
-    };
-
-    res.sendFile("gameloop.js", options, function (err) {
-      if (err) {
-        next(err);
-      }
-    });
+    send("gameloop.js", res, next);
   });
+  app.get("/gameloop.js.map", function (req, res, next) {
+    send("gameloop.js.map", res, next);
+  });
+  app.get("/gameloop.css", function (req, res, next) {
+    // console.log("css");
+    send("/style/gameloop.css", res, next);
+  });
+  app.get("/gameloop.css.map", function (req, res, next) {
+    send("/style/gameloop.css.map", res, next);
+  });
+
+  root = _path2.default.resolve(root);
+  // console.log(root);
 
   app.use(_express2.default.static(root));
 
   return app.listen(port, function () {
-    process.stdout.write("Gameloop cli running on port " + port);
+    process.stdout.write("Gameloop cli running on port " + port + "\n");
   });
 };
 
@@ -71,3 +69,30 @@ var _expressWinston = require("express-winston");
 var _expressWinston2 = _interopRequireDefault(_expressWinston);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function send(file, res, next) {
+  var moduleRoot = _path2.default.normalize(__dirname + "/../");
+
+  console.log(moduleRoot);
+
+  var options = {
+    root: moduleRoot,
+    dotfiles: "deny",
+    headers: {
+      "x-timestamp": Date.now(),
+      "x-sent": true
+    }
+  };
+
+  res.sendFile(file, options, function (err) {
+    if (err) {
+      next(err);
+    }
+  });
+} /**
+   * Gameloop server
+   *
+   * Starts a node webserver for serving the gameloop content.
+   *
+   * @type {createServer|exports|module.exports}
+   */

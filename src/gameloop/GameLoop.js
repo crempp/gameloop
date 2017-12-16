@@ -1,4 +1,5 @@
 import { GameException } from "./Exceptions";
+import { onReady } from "./util/OnReady";
 
 /**
  * GameLoop Class
@@ -30,20 +31,6 @@ export default class GameLoop {
    * @param canvas
    */
   initialize (canvas) {
-    if (!this.canvas) {
-      throw new GameException("Missing canvas");
-    }
-
-    // skip setting if context is already known.
-    if (this.drawContext === null){
-      if (typeof(this.canvas) === "string"){
-        this.canvas = document.getElementById(canvas);
-      }
-      if (this.canvas.getContext){
-        this.ctx = this.canvas.getContext("2d");
-      }
-    }
-
     //unify browser functions
     (function(w) {
       w.requestAnimationFrame = window.requestAnimationFrame ||
@@ -53,11 +40,32 @@ export default class GameLoop {
         function(f){ return w.setTimeOut(f, 33);};  // IE9?
     })(window);
 
-    // kick off main loop
-    window.requestAnimationFrame(this._loop);
+    onReady( () => {
+      if (!canvas) {
+        throw new GameException("Missing canvas");
+      }
 
-    this.initialized = true;
-    this._fireInitEvents();
+      // skip setting if context is already known.
+      if (this.drawContext === null){
+        if (typeof(canvas) === "string"){
+          this.canvas = document.getElementById(canvas);
+        }
+        if (this.canvas.getContext){
+          this.ctx = this.canvas.getContext("2d");
+          // Why do we need drawContext?
+          this.drawContext = this.ctx;
+        }
+      }
+
+      window.addEventListener("resize", this._resizeCanvas.bind(this), false);
+      this._resizeCanvas();
+
+      // kick off main loop
+      window.requestAnimationFrame(this._loop.bind(this));
+
+      this.initialized = true;
+      this._fireInitEvents();
+    });
   }
 
   /**
@@ -142,7 +150,7 @@ export default class GameLoop {
       this._update(timestamp);
       this._draw(timestamp);
     }
-    requestAnimationFrame(this._loop);
+    requestAnimationFrame(this._loop.bind(this));
   }
 
   /**
@@ -197,5 +205,16 @@ export default class GameLoop {
     this.initEvents.forEach((event) => {
       event.call(this);
     });
+  }
+
+  _resizeCanvas () {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+
+    /**
+     * Your drawings need to be inside this function otherwise they will be reset when
+     * you resize the browser window and the canvas goes will be cleared.
+     */
+    // drawStuff();
   }
 }
