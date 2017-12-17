@@ -99,7 +99,7 @@ export default class Sprite {
    *
    * @param val
    */
-  setImageElement = function(val){
+  setImageElement (val) {
     this.imageElement = val;
     this.width = val.width;
     this.height = val.height;
