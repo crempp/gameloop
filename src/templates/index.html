@@ -12,9 +12,32 @@
   <script src="gameloop.js"></script>
 
   <script type="text/javascript">
+    // ACTUAL DEMO
+    //GameLoop.initialize("game-canvas");
+    //GameLoop.addItem(new Clear("#000040"));
+    //GameLoop.addItem(new StarField());
+
+    // TESTING
+    // --------------------------------------------
     GameLoop.initialize("game-canvas");
     GameLoop.addItem(new Clear("#000040"));
-    GameLoop.addItem(new StarField());
+
+    var ship = new Shooter();
+    ship.readyLoadImageId('ship');
+
+    var basicinput = new keyBasicInput();
+    ship.setInput(basicinput);
+
+    Game.addItem(ship);
+
+    var debugout = new GameLoop('debug');
+
+    var debug = new Debug();
+    debugout.addItem(debug);
+    debug.setFullWidth(true);
+    debug.addItem(basicinput, 'getX', 'input.getX()');
+    debug.addItem(ship, 'getForwardNormal', 'shipfront');
+    debug.addItem(ship, 'getVelocity', 'ship_v');
   </script>
 
 </head>
