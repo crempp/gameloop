@@ -58,7 +58,7 @@ export default class Manager {
    * loadAssets
    */
   loadAssets () {
-    const assets = document.querySelectorAll('[data-gl-asset]');
+    const assets = document.querySelectorAll("[data-gl-asset]");
     assets.forEach((asset) => {
       this.addAsset(asset.dataset.glAsset, asset);
     });
@@ -75,7 +75,7 @@ export default class Manager {
     this.components.forEach((component) => {
       component.update(context,timediff, timestamp);
     });
-  };
+  }
 
   /**
    * addItem
@@ -84,7 +84,7 @@ export default class Manager {
    */
   addItem (component) {
     this.components.push(component);
-  };
+  }
 
   /**
    * await

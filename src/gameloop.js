@@ -11,6 +11,10 @@ import GLAudio from "./gameloop/base/audio/GLAudio"
 import SoundTrack from "./gameloop/base/audio/SoundTrack"
 import Bullet from "./gameloop/components/sample/Bullet";
 import Shooter from "./gameloop/components/sample/Shooter";
+import Keyboard from "./gameloop/base/input/Keyboard";
+import Mouse from "./gameloop/base/input/Mouse";
+import Gamepad from "./gameloop/base/input/Gamepad";
+import Touch from "./gameloop/base/input/Touch";
 
 import logo from "./logo";
 
@@ -38,4 +42,7 @@ window.Shooter = Shooter;
 // Globalize instances
 window.manager = new Manager();
 window.GameLoop = new GameLoop();
-
+window.Keyboard = new Keyboard(document);
+window.Mouse = new Mouse(document);
+window.Gamepad = new Gamepad(navigator, window, console)
+window.Touch = new Touch(navigator, window, console)

@@ -811,7 +811,23 @@ var _Shooter = __webpack_require__(16);
 
 var _Shooter2 = _interopRequireDefault(_Shooter);
 
-var _logo = __webpack_require__(17);
+var _Keyboard = __webpack_require__(17);
+
+var _Keyboard2 = _interopRequireDefault(_Keyboard);
+
+var _Mouse = __webpack_require__(18);
+
+var _Mouse2 = _interopRequireDefault(_Mouse);
+
+var _Gamepad = __webpack_require__(19);
+
+var _Gamepad2 = _interopRequireDefault(_Gamepad);
+
+var _Touch = __webpack_require__(20);
+
+var _Touch2 = _interopRequireDefault(_Touch);
+
+var _logo = __webpack_require__(21);
 
 var _logo2 = _interopRequireDefault(_logo);
 
@@ -841,6 +857,10 @@ window.Shooter = _Shooter2.default;
 // Globalize instances
 window.manager = new _Manager2.default();
 window.GameLoop = new _GameLoop2.default();
+window.Keyboard = new _Keyboard2.default(document);
+window.Mouse = new _Mouse2.default(document);
+window.Gamepad = new _Gamepad2.default(navigator, window, console);
+window.Touch = new _Touch2.default(navigator, window, console);
 
 /***/ }),
 /* 9 */
@@ -1378,7 +1398,7 @@ var Manager = function () {
     value: function loadAssets() {
       var _this = this;
 
-      var assets = document.querySelectorAll('[data-gl-asset]');
+      var assets = document.querySelectorAll("[data-gl-asset]");
       assets.forEach(function (asset) {
         _this.addAsset(asset.dataset.glAsset, asset);
       });
@@ -1399,21 +1419,18 @@ var Manager = function () {
         component.update(context, timediff, timestamp);
       });
     }
-  }, {
-    key: "addItem",
-
 
     /**
      * addItem
      *
      * @param component
      */
+
+  }, {
+    key: "addItem",
     value: function addItem(component) {
       this.components.push(component);
     }
-  }, {
-    key: "await",
-
 
     /**
      * await
@@ -1422,6 +1439,9 @@ var Manager = function () {
      * @param callback
      * @param context
      */
+
+  }, {
+    key: "await",
     value: function _await(key, callback, context) {
       if (this.registry.hasOwnProperty(key)) {
         switch (this.registry[key].state) {
@@ -1881,6 +1901,554 @@ exports.default = Shooter;
 
 /***/ }),
 /* 17 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/*
+ level 1 - basic wrappers around raw inputs.
+ For keyboard, current depressed keys.  For mouse, current position within viewport.
+ For gamepad, sticks as vectors and button states.  Singletons.
+
+ level 2 - Unifying abstractions and functions of basic input.  Customization
+ settings such as key bindings.  Instances per player.
+
+ level 3 - translation to game input.  Take values from level2 and wrap them
+ in an API appropriate to the game being played.
+
+ */
+
+//Level 1
+
+var Keyboard = function () {
+    function Keyboard(receiver) {
+        var _this = this;
+
+        _classCallCheck(this, Keyboard);
+
+        this.receiver = receiver;
+
+        this.keys = {};
+        this.keyProperty = "key";
+        this.isPushed = this.isKeyDown;
+
+        function keyEventAnalyze(e) {
+            var backups = ["key", "which", "keyCode"];
+            while (!e.hasOwnProperty(this.keyProperty)) {
+                this.keyProperty = backups.shift();
+                if (backups.length === 0) {
+                    // TODO: figure out what to do about this situation.
+                    break;
+                }
+            }
+            this.receiver.removeEventListener("keydown", keyEventAnalyze);
+        }
+
+        this.receiver.addEventListener("keydown", keyEventAnalyze);
+        this.receiver.addEventListener("keydown", function (e) {
+            _this.keys[e[_this.keyProperty]] = true;
+        });
+        this.receiver.addEventListener("keyup", function (e) {
+            _this.keys[e[_this.keyProperty]] = false;
+        });
+    }
+
+    _createClass(Keyboard, [{
+        key: "isKeyDown",
+        value: function isKeyDown(value) {
+            return this.keys[value];
+        }
+    }, {
+        key: "anyKey",
+        value: function anyKey() {
+            var _this2 = this;
+
+            this.keys.forEach(function (key) {
+                if (_this2.keys[key]) {
+                    return true;
+                }
+            });
+        }
+    }]);
+
+    return Keyboard;
+}();
+
+exports.default = Keyboard;
+
+
+function UIRegion(x, y, w, h) {
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+};
+UIRegion.prototype.contains = function (o) {
+    return o.x > this.x && o.x < this.x + this.w && o.y > this.y && o.y < this.y + this.h;
+};
+UIRegion.prototype.center = function () {
+    return { x: this.x + this.w / 2, y: this.y + this.h / 2 };
+};
+
+var Input = function Input() {
+    var _inputs = {
+        mouse: GLInput.mouse,
+        keyboard: GLInput.keyboard,
+        gamepad: GLInput.gamepad,
+        touch: GLInput.touch
+    };
+
+    var axes = {};
+    var buttons = {};
+    var prevButtons = {};
+    var currButtons = {};
+
+    var UIList = {};
+    var currUI = {};
+    var prevUI = {};
+
+    this.getPointer = function () {
+        return _inputs.mouse;
+    };
+
+    this.setUI = function (id, region, buttons) {
+        if (!buttons) {
+            buttons = [];
+        }
+
+        // validate region object
+        if (typeof region.contains != "function") {
+            throw "invalid";
+        }
+        UIList[id] = { region: region, buttons: buttons };
+    };
+    this.removeUI = function (id) {
+        delete UIList[id];
+        delete currUI[id];
+        delete prevUI[id];
+    };
+
+    this.setAxisId = function (id, type, typeid, typeid2) {
+        if (!_inputs.hasOwnProperty(type)) return;
+        axes[id] = { type: type, id: typeid, id2: typeid2 };
+    };
+    this.setButtonId = function (id, type, typeid) {
+        if (!_inputs.hasOwnProperty(type)) return;
+        buttons[id] = { type: type, id: typeid };
+    };
+
+    this.getAxis = function (id, frompos) {
+        var val = 0;
+        var type = axes[id].type;
+        switch (type) {
+            case 'mouse':
+            case 'touch':
+                if (_inputs[type].isTracking(axes[id].id)) {
+                    var dir = _inputs[type].getPosition(axes[id].id);
+                    var coord = axes[id].id;
+                    var other = coord == 'x' ? 'y' : 'x';
+                    var unnormal = dir[coord] - frompos[coord];
+                    var unsign = unnormal < 0 ? -1 : 1;
+                    var otherUnnormal = dir[other] - frompos[other];
+                    var othersign = otherUnnormal < 0 ? -1 : 1;
+                    val = unsign * Math.sqrt(unnormal * unnormal / (unnormal * unnormal + otherUnnormal * otherUnnormal));
+                }
+                break;
+            case 'keyboard':
+                var keyPos = axes[id].id;
+                var keyNeg = axes[id].id2;
+                if (_inputs.keyboard.isKeyDown(keyNeg)) {
+                    val -= 1;
+                }
+                if (_inputs.keyboard.isKeyDown(keyPos)) {
+                    val += 1;
+                }
+                break;
+            case 'gamepad':
+                val = _inputs.gamepad.getAxis(axes[id].id);
+                break;
+        }
+        return val;
+    };
+    this.isButtonDown = function (id) {
+        return currButtons.hasOwnProperty(id) && currButtons[id];
+    };
+    this.newButtonPush = function (id) {
+        return currButtons.hasOwnProperty(id) && currButtons[id] && !prevButtons[id];
+    };
+
+    this.isUIOver = function (id) {
+        return currUI.hasOwnProperty(id) && currUI[id];
+    };
+
+    this.isUIPush = function (id) {
+
+        // default false
+        var result = false;
+        // check that the element is being interacted with, and that the element has buttons
+        if (currUI.hasOwnProperty(id) && UIList[id].buttons.length) {
+            // iterate the element's buttons
+            for (var b = 0; b < UIList[id].buttons.length; ++b) {
+                if (this.isButtonDown(UIList[id].buttons[b])) {
+                    // keyboard and gamepad are button-only,
+                    // mouse and touch also require position
+                    var type = buttons[UIList[id].buttons[b]].type;
+                    if (type == 'keyboard' || type == 'gamepad') {
+                        result = true;
+                    } else if (type == 'mouse' || type == 'touch') {
+                        result = this.isUIOver(id);
+                    }
+                    // stop iterating for any success
+                    if (result) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return result;
+    };
+
+    this.anyPress = function () {
+        return _inputs.keyboard.anyKey() || _inputs.gamepad.anyButton() || _inputs.mouse.anyButton() || _inputs.touch.anyTouch();
+    };
+    this.has = function (type) {
+        switch (type) {
+            case 'keyboard':
+                return true;
+            case 'mouse':
+                return true;
+            case 'touch':
+                return _inputs.touch.exists();
+            case 'gamepad':
+                return _inputs.gamepad.exists();
+            default:
+                return false;
+        }
+    };
+    var getButtons = function getButtons() {
+
+        for (var butt in buttons) {
+            prevButtons[butt] = currButtons[butt];
+            currButtons[butt] = _inputs[buttons[butt].type].isPushed(buttons[butt].id);
+        }
+    };
+    var getUI = function getUI() {
+        for (var id in UIList) {
+            prevUI[id] = currUI[id];
+            currUI[id] = _inputs['mouse'].getIsWithinUI(UIList[id].region) || _inputs['touch'].getIsWithinUI(UIList[id].region);
+        }
+    };
+
+    this.update = function (context, timediff, timestamp) {
+        if (!_inputs.mouse.hasViewport()) {
+            _inputs.mouse.setViewPort(context.canvas);
+        }
+        if (!_inputs.touch.hasViewport()) {
+            _inputs.touch.setViewPort(context.canvas);
+        }
+        getButtons();
+        getUI();
+    };
+};
+
+/**
+ * Tier 3: input objects used by games.
+ * I am attempting to use GameInput as a prototype for some examples.
+ */
+var GameInput = function GameInput() {
+    this.input = new Input();
+    this.getInput = function () {
+        return this.input;
+    };
+};
+GameInput.prototype.update = function (context, timediff, timestamp) {
+    this.getInput().update(context, timediff, timestamp);
+};
+GameInput.prototype.anyPress = function () {
+    return this.getInput().anyPress();
+};
+GameInput.prototype.getPointer = function () {
+    return this.getInput().getPointer().getPosition();
+};
+
+// placeholder
+var nullInput = function nullInput() {
+    this.getX = function () {
+        return 0;
+    };
+    this.getY = function () {
+        return 0;
+    };
+    this.isShooting = function () {
+        return false;
+    };
+    this.update = function (context, timediff, timestamp) {
+        return;
+    };
+};
+
+var MenuInput = function MenuInput() {
+    var menuMoveTime = 0;
+    this.canMove = function (timediff) {
+        menuMoveTime -= timediff;
+        menuMoveTime = Math.max(menuMoveTime, 0);
+        return menuMoveTime <= 0;
+    };
+    this.menuMove = function (time) {
+        menuMoveTime += time;
+    };
+    this.menuThreshold = 0.75;
+    this.menuDelay = 300;
+
+    this._up = false;
+    this._down = false;
+    this._select = false;
+
+    this.getInput().setAxisId('menuupdown', 'keyboard', 40, 38);
+    this.getInput().setAxisId('menuupdown2', 'gamepad', 1);
+    this.getInput().setAxisId('menuupdown3', 'gamepad', 3);
+    this.getInput().setAxisId('menuupdown4', 'gamepad', 5);
+
+    this.getInput().setButtonId('menuselect1', 'keyboard', 13);
+    this.getInput().setButtonId('menuselect2', 'keyboard', 32);
+    this.getInput().setButtonId('menuselect3', 'gamepad', 0);
+    this.getInput().setButtonId('menuclick', 'mouse', 1);
+
+    this.getInput().setButtonId('menuback1', 'keyboard', 27);
+    this.getInput().setButtonId('menuback2', 'gamepad', 1);
+};
+MenuInput.prototype = new GameInput();
+MenuInput.constructor = MenuInput;
+
+MenuInput.prototype.update = function (context, timediff, timestamp) {
+    GameInput.prototype.update.call(this, context, timediff, timestamp);
+    this.menuUpdate(timediff);
+};
+MenuInput.prototype.menuUpdate = function (timediff) {
+
+    if (!this.canMove(timediff)) {
+        this._down = false;
+        this._up = false;
+        this._select = false;
+        return;
+    }
+    if (this.getInput().newButtonPush('menuselect1') || this.getInput().newButtonPush('menuselect2') || this.getInput().newButtonPush('menuselect3')) {
+        this.menuMove(this.menuDelay);
+        this._select = true;
+    } else {
+        this._select = false;
+    }
+    var menuupdown = this.getInput().getAxis('menuupdown') + this.getInput().getAxis('menuupdown2') + this.getInput().getAxis('menuupdown3') + this.getInput().getAxis('menuupdown4');
+
+    if (menuupdown >= this.menuThreshold) {
+        this._down = true;
+        this.menuMove(this.menuDelay);
+    } else {
+        this._down = false;
+    }
+    if (menuupdown <= -1 * this.menuThreshold) {
+        this._up = true;
+        this.menuMove(this.menuDelay);
+    } else {
+        this._up = false;
+    }
+};
+MenuInput.prototype.menuDown = function () {
+    return this._down;
+};
+MenuInput.prototype.menuUp = function () {
+    return this._up;
+};
+MenuInput.prototype.menuSelect = function () {
+    return this._select;
+};
+MenuInput.prototype.menuClick = function () {
+    return this.getInput().newButtonPush('menuclick');
+};
+MenuInput.prototype.menuBack = function () {
+    return this.getInput().newButtonPush('menuback1') || this.getInput().newButtonPush('menuback2');
+};
+
+/***/ }),
+/* 18 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Mouse = function () {
+  function Mouse(receiver) {
+    _classCallCheck(this, Mouse);
+
+    this.receiver = receiver;
+
+    // if canvas size mismatches css/event size
+    this.vp_pixel_ratio_x = 1;
+    this.vp_pixel_ratio_y = 1;
+
+    this.viewport = null;
+    this.position = { x: -1, y: -1 };
+    this.tracking = false;
+    this.buttons = {};
+
+    this.receiver.addEventListener("mouseup", this.up);
+    this.receiver.addEventListener("mousedown", this.down);
+
+    // browser compatibility section
+    function mouseAnalyze(e) {
+      if (!("offsetX" in e)) {
+        this.getOffset = function (e) {
+          var bcr = e.target.getBoundingClientRect();
+          return {
+            x: this.vp_pixel_ratio_x * (e.clientX - bcr.left),
+            y: this.vp_pixel_ratio_y * (e.clientY - bcr.top)
+          };
+        };
+      }
+      this.receiver.removeEventListener("mousemove", mouseAnalyze);
+    }
+    this.receiver.addEventListener("mousemove", mouseAnalyze);
+  }
+
+  _createClass(Mouse, [{
+    key: "getOffset",
+    value: function getOffset(e) {
+      return {
+        x: this.vp_pixel_ratio_x * e.offsetX,
+        y: this.vp_pixel_ratio_y * e.offsetY
+      };
+    }
+  }, {
+    key: "getIsWithinUI",
+    value: function getIsWithinUI(region) {
+      return this.tracking && region.contains(this.position);
+    }
+  }, {
+    key: "over",
+    value: function over() {
+      this.tracking = true;
+    }
+  }, {
+    key: "out",
+    value: function out() {
+      this.tracking = false;
+      this.position = {
+        x: -1,
+        y: -1
+      };
+    }
+  }, {
+    key: "move",
+    value: function move(e) {
+      if (this.tracking) {
+        this.position = this.getOffset(e);
+      }
+    }
+  }, {
+    key: "down",
+    value: function down(e) {
+      if (this.tracking) {
+        this.buttons[e.which] = true;
+      }
+    }
+  }, {
+    key: "up",
+    value: function up(e) {
+      this.buttons[e.which] = false;
+    }
+  }, {
+    key: "click",
+    value: function click(e) {
+      // TODO
+    }
+  }, {
+    key: "wireEvents",
+    value: function wireEvents() {
+      if (this.viewport !== null) {
+        this.viewport.addEventListener("click", this.click);
+        this.viewport.addEventListener("mouseover", this.over);
+        this.viewport.addEventListener("mouseout", this.out);
+        this.viewport.addEventListener("mousemove", this.move);
+      }
+    }
+  }, {
+    key: "unwireEvents",
+    value: function unwireEvents() {
+      if (this.viewport !== null) {
+        this.viewport.removeEventListener("click", this.click);
+        this.viewport.removeEventListener("mouseover", this.over);
+        this.viewport.removeEventListener("mouseout", this.out);
+        this.viewport.removeEventListener("mousemove", this.move);
+      }
+    }
+  }, {
+    key: "setViewPort",
+    value: function setViewPort(canvas) {
+      this.unwireEvents();
+      this.viewport = canvas;
+      this.vp_pixel_ratio_x = canvas.width / canvas.clientWidth;
+      this.vp_pixel_ratio_y = canvas.height / canvas.clientHeight;
+      this.wireEvents();
+    }
+  }, {
+    key: "hasViewport",
+    value: function hasViewport() {
+      return this.viewport !== null;
+    }
+  }, {
+    key: "isPushed",
+    value: function isPushed(id) {
+      return id in this.buttons && this.buttons[id];
+    }
+  }, {
+    key: "anyButton",
+    value: function anyButton() {
+      this.buttons.forEach(function (button) {
+        if (button) {
+          return true;
+        }
+      });
+      return false;
+    }
+  }]);
+
+  return Mouse;
+}();
+
+exports.default = Mouse;
+
+/***/ }),
+/* 19 */
+/***/ (function(module, exports) {
+
+throw new Error("Module build failed: SyntaxError: Unexpected token (48:6)\n\n\u001b[0m \u001b[90m 46 | \u001b[39m    }\n \u001b[90m 47 | \u001b[39m  }\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 48 | \u001b[39m  \u001b[36mthis\u001b[39m\u001b[33m.\u001b[39mhasGamepad \u001b[33m=\u001b[39m \u001b[36mfunction\u001b[39m(){\n \u001b[90m    | \u001b[39m      \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 49 | \u001b[39m    \u001b[36mreturn\u001b[39m (gamepadNumber \u001b[33m!==\u001b[39m \u001b[36mnull\u001b[39m \u001b[33m&&\u001b[39m gamepads\u001b[33m.\u001b[39mhasOwnProperty(gamepadNumber))\u001b[33m;\u001b[39m\n \u001b[90m 50 | \u001b[39m  }\u001b[33m;\u001b[39m\n \u001b[90m 51 | \u001b[39m  \u001b[36mthis\u001b[39m\u001b[33m.\u001b[39mgetGamepad \u001b[33m=\u001b[39m \u001b[36mfunction\u001b[39m(){\u001b[0m\n");
+
+/***/ }),
+/* 20 */
+/***/ (function(module, exports) {
+
+throw new Error("Module build failed: SyntaxError: Unexpected token, expected , (131:0)\n\n\u001b[0m \u001b[90m 129 | \u001b[39m\n \u001b[90m 130 | \u001b[39m}\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 131 | \u001b[39m\n \u001b[90m     | \u001b[39m\u001b[31m\u001b[1m^\u001b[22m\u001b[39m\u001b[0m\n");
+
+/***/ }),
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
